@@ -1,5 +1,4 @@
 // ================= Firebase 資料庫設定 =================
-// TODO: 請到 Firebase 控制台取得你的配置並覆蓋這裡
 const firebaseConfig = {  
   apiKey: "AIzaSyBx_GLc9kjPpq0Z62ANuqhIBKPnR-B6-lk",  
   authDomain: "foodtestgame.firebaseapp.com",  
@@ -13,77 +12,52 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ================= 音效與素材 (音效池 Audio Pool 零延遲版) =================
-const sfxPool = {
-  correct: [],
-  wrong: [],
-  swoosh: [],
-  click: []
+// ================= 終極穩定音效系統 (專治 iPad Safari) =================
+const sfx = {
+  correct: new Audio('correct.mp3'),
+  wrong: new Audio('wrong.mp3'),
+  swoosh: new Audio('swoosh.mp3'),
+  click: new Audio('click.mp3')
 };
 
-// 預先產生多個音效分身 (解決重疊播放與延遲問題)
-function initAudioPool(name, filename, poolSize) {
-  for (let i = 0; i < poolSize; i++) {
-    const audio = new Audio(filename);
-    audio.volume = 0.5;
-    audio.load(); // 強制預先載入
-    sfxPool[name].push(audio);
+let isAudioUnlocked = false;
+
+// 核心解法：利用學生的「第一次點擊螢幕」來強制喚醒所有音效
+function unlockAudio() {
+  if (isAudioUnlocked) return;
+  
+  for (let key in sfx) {
+    sfx[key].volume = 0; // 先設為完全靜音
+    // 瞬間播放並暫停，強迫 Safari 把聲音塞進快取記憶體 (Cache)
+    let playPromise = sfx[key].play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        sfx[key].pause();
+        sfx[key].currentTime = 0;
+        sfx[key].volume = 0.5; // 恢復正常音量
+      }).catch(() => {});
+    }
   }
+  isAudioUnlocked = true;
+  
+  // 解鎖成功後，移除監聽器節省效能
+  document.removeEventListener('touchstart', unlockAudio);
+  document.removeEventListener('mousedown', unlockAudio);
 }
 
-// 根據使用頻率分配分身數量
-initAudioPool('correct', 'correct.mp3', 3);
-initAudioPool('wrong', 'wrong.mp3', 2);
-initAudioPool('swoosh', 'swoosh.mp3', 3);
-initAudioPool('click', 'click.mp3', 5); // 點擊最頻繁，給5個分身
+// 監聽畫面的任何第一次點擊或觸控
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('mousedown', unlockAudio, { once: true });
 
 function playSound(name) {
-  const pool = sfxPool[name];
-  if (!pool) return;
+  if (!sfx[name]) return;
   
-  // 在池子裡找一個目前「沒有在播放」的分身
-  let availableAudio = pool.find(a => a.paused || a.ended);
-  
-  // 如果分身都在忙，就強制叫第一個分身從頭開始播
-  if (!availableAudio) {
-    availableAudio = pool[0];
-    availableAudio.currentTime = 0;
-  }
-  
-  // 播放！
-  availableAudio.play().catch(e => {
-    // 攔截並忽略 Safari 首次載入的防護警告
+  // 零延遲且可重疊的秘訣：直接從快取記憶體「複製 (Clone)」一個聲音來播放
+  const soundClone = sfx[name].cloneNode();
+  soundClone.volume = 0.5;
+  soundClone.play().catch(e => {
+    console.log("等待玩家第一次點擊解鎖音效...");
   });
-}
-
-
-// 遊戲載入時立刻把音效塞進記憶體
-loadSound('correct', 'correct.mp3');
-loadSound('wrong', 'wrong.mp3');
-loadSound('swoosh', 'swoosh.mp3');
-loadSound('click', 'click.mp3');
-
-// 零延遲播放函數
-function playSound(name) {
-  // Apple 安全機制：必須在玩家第一次點擊時「喚醒」音效引擎
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  
-  const buffer = audioBuffers[name];
-  if (buffer) {
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    
-    // 設定音量 (0.5 = 50%)
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.5;
-    
-    // 連接並立刻播放
-    source.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    source.start(0);
-  }
 }
 
 const svgs = {

@@ -13,23 +13,49 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ================= 音效與素材 (Web Audio API 零延遲升級) =================
-// 建立音頻環境 (兼容 Safari)
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-const audioBuffers = {}; // 用來存放解碼後的記憶體音效
+// ================= 音效與素材 (音效池 Audio Pool 零延遲版) =================
+const sfxPool = {
+  correct: [],
+  wrong: [],
+  swoosh: [],
+  click: []
+};
 
-// 非同步載入並解碼音效檔
-async function loadSound(name, url) {
-  try {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    audioBuffers[name] = audioBuffer;
-  } catch (error) {
-    console.log(`音效 ${name} 載入失敗，請確認檔案是否存在`, error);
+// 預先產生多個音效分身 (解決重疊播放與延遲問題)
+function initAudioPool(name, filename, poolSize) {
+  for (let i = 0; i < poolSize; i++) {
+    const audio = new Audio(filename);
+    audio.volume = 0.5;
+    audio.load(); // 強制預先載入
+    sfxPool[name].push(audio);
   }
 }
+
+// 根據使用頻率分配分身數量
+initAudioPool('correct', 'correct.mp3', 3);
+initAudioPool('wrong', 'wrong.mp3', 2);
+initAudioPool('swoosh', 'swoosh.mp3', 3);
+initAudioPool('click', 'click.mp3', 5); // 點擊最頻繁，給5個分身
+
+function playSound(name) {
+  const pool = sfxPool[name];
+  if (!pool) return;
+  
+  // 在池子裡找一個目前「沒有在播放」的分身
+  let availableAudio = pool.find(a => a.paused || a.ended);
+  
+  // 如果分身都在忙，就強制叫第一個分身從頭開始播
+  if (!availableAudio) {
+    availableAudio = pool[0];
+    availableAudio.currentTime = 0;
+  }
+  
+  // 播放！
+  availableAudio.play().catch(e => {
+    // 攔截並忽略 Safari 首次載入的防護警告
+  });
+}
+
 
 // 遊戲載入時立刻把音效塞進記憶體
 loadSound('correct', 'correct.mp3');
@@ -59,7 +85,6 @@ function playSound(name) {
     source.start(0);
   }
 }
-
 
 const svgs = {
   strip: `<svg width="60" height="200" viewBox="0 0 40 150" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="-10" width="20" height="150" rx="3" fill="#F8F9FA" stroke="#D1D5DB" stroke-width="2"/><rect id="dynamic-color" x="12" y="110" width="16" height="30" rx="2" fill="gold" style="transition: fill 0.5s;" /></svg>`,

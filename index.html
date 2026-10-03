@@ -63,7 +63,64 @@
       <p class="mt-4 text-sm text-slate-500 bg-slate-100 p-3 rounded-lg">💡 提示：<br>沒有葡萄糖/蛋白質 = 試紙呈黃色<br>沒有澱粉 = 碘液呈棕色<br>沒有維生素C = DCPIP呈藍色<br>沒有脂質 = 濾紙水跡會消失</p>
     </div>
     <button onclick="hideNotes()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4">返回主選單</button>
+  </div>  <!-- 溫習筆記面板 -->
+  <div id="notes-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">
+    <h2 class="text-4xl font-black text-slate-800 mt-4 mb-6 drop-shadow-sm">溫習筆記</h2>
+    
+    <!-- 加闊了面板 (max-w-2xl) 以容納 4 個直行 -->
+    <div class="w-full max-w-2xl flex-1 overflow-y-auto rounded-3xl border-4 border-slate-200 bg-white shadow-xl p-2 sm:p-6 hide-scrollbar">
+      
+      <table class="w-full text-center border-collapse">
+        <thead>
+          <tr class="border-b-4 border-slate-200 text-slate-600 font-black text-lg sm:text-xl">
+            <th class="py-3 w-1/4">食物物質</th>
+            <th class="py-3 w-1/4">測試方法</th>
+            <th class="py-3 w-1/4 text-green-600">含有 (✔️)</th>
+            <th class="py-3 w-1/4 text-rose-500">沒有 (❌)</th>
+          </tr>
+        </thead>
+        <tbody class="text-md sm:text-lg">
+          <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="py-4 font-bold text-slate-700">葡萄糖</td>
+            <td class="py-4 text-slate-600">尿糖試紙</td>
+            <td class="py-4 text-green-500 font-black">綠色</td>
+            <td class="py-4 text-amber-400 font-black">黃色</td>
+          </tr>
+          <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="py-4 font-bold text-slate-700">蛋白質</td>
+            <td class="py-4 text-slate-600">尿蛋白試紙</td>
+            <td class="py-4 text-green-500 font-black">綠色</td>
+            <td class="py-4 text-amber-400 font-black">黃色</td>
+          </tr>
+          <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="py-4 font-bold text-slate-700">澱粉</td>
+            <td class="py-4 text-slate-600">碘液</td>
+            <td class="py-4 text-blue-900 font-black">藍黑色</td>
+            <td class="py-4 text-amber-700 font-black">棕色</td>
+          </tr>
+          <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
+            <td class="py-4 font-bold text-slate-700">維生素C</td>
+            <td class="py-4 text-slate-600">DCPIP 溶液</td>
+            <td class="py-4 text-slate-300 font-black drop-shadow-sm">無色</td>
+            <td class="py-4 text-blue-500 font-black">藍色</td>
+          </tr>
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-4 font-bold text-slate-700">脂質</td>
+            <td class="py-4 text-slate-600">濾紙</td>
+            <td class="py-4 text-emerald-600 font-black leading-tight">恆久<br>半透明點</td>
+            <td class="py-4 text-rose-400 font-black leading-tight">水跡<br>會消失</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <p class="mt-6 text-sm sm:text-base text-slate-500 bg-slate-50 border-2 border-slate-100 p-4 rounded-xl text-center font-bold">
+        💡 提示：請在遊戲中看清楚試劑的顏色變化，時間到了會自動提交答案喔！
+      </p>
+    </div>
+    
+    <button onclick="hideNotes()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-slate-300">返回主選單</button>
   </div>
+
 
   <!-- 排行榜面板 -->
   <div id="leaderboard-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">

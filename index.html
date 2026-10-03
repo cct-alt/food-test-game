@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>生物實驗室：檢測快問快答</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body id="game-body" class="h-screen flex flex-col overflow-hidden">
+
+    <!-- 畫面上半部分：顯示區 (木桌區域) -->
+    <!-- 使用透明度與毛玻璃，不要完全蓋死背景 -->
+    <div class="h-1/2 relative flex flex-col items-center border-b-2 border-white/50 bg-white/20 backdrop-blur-[2px]">
+
+        <div class="w-full flex justify-between p-4 text-xl font-bold z-10 font-sans text-slate-700 drop-shadow-sm">
+            <div class="flex flex-col">
+                <span class="text-slate-600">分數: <span id="score"
+                        class="text-amber-500 text-2xl font-black">0</span></span>
+                <span id="combo-display" class="text-orange-500 text-sm hidden font-black">🔥 連擊 x<span
+                        id="combo">1</span></span>
+            </div>
+            <div class="text-center">
+                <div id="hp-display" class="text-2xl drop-shadow-md">❤️❤️❤️</div>
+            </div>
+            <div class="text-right">
+                <span class="text-slate-500 text-sm">剩餘時間</span><br>
+                <span id="timer" class="text-rose-500 text-2xl font-black">--</span><span
+                    class="text-sm text-rose-400">s</span>
+            </div>
+        </div>
+
+        <div id="feedback"
+            class="absolute top-1/3 text-5xl font-black opacity-0 transition-opacity z-20 pointer-events-none drop-shadow-md">
+        </div>
+
+        <div id="test-item-container" class="absolute top-0 mt-20 flex flex-col items-center">
+            <!-- 試劑名稱標籤 -->
+            <div id="reagent-label"
+                class="bg-white/90 border-2 border-slate-200 text-slate-700 px-6 py-2 rounded-full font-bold mb-4 shadow-lg transition-all duration-300">
+                等待檢測...</div>
+            <div id="svg-container" class="drop-shadow-xl"></div>
+        </div>
+    </div>
+
+    <!-- 畫面下半部分：作答區 -->
+    <div class="h-1/2 p-5 flex flex-col relative z-10 bg-white/30 backdrop-blur-md">
+
+        <!-- 開始/結算畫面 -->
+        <div id="overlay-screen"
+            class="absolute inset-0 bg-white/80 backdrop-blur-lg flex flex-col items-center justify-center z-30">
+            <h1 id="screen-title" class="text-5xl font-black text-slate-700 mb-4 drop-shadow-sm">食物物質檢測</h1>
+            <p id="final-score" class="text-3xl text-slate-500 mb-8 hidden font-bold">最終分數: <span
+                    class="text-amber-500 font-black text-5xl">0</span></p>
+            <button onclick="startGame()"
+                class="bg-blue-500 border-b-4 border-blue-700 text-white px-10 py-5 rounded-3xl text-3xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all hover:bg-blue-400">開始測試</button>
+        </div>
+
+        <!-- 5個按鈕與提交 -->
+        <div id="game-controls"
+            class="flex flex-col h-full pointer-events-none opacity-50 transition-opacity duration-300">
+            <div class="grid grid-cols-2 gap-3 mb-auto">
+                <button id="btn-glucose" onclick="toggleAnswer('glucose')" class="btn-substance">葡萄糖</button>
+                <button id="btn-starch" onclick="toggleAnswer('starch')" class="btn-substance">澱粉</button>
+                <button id="btn-lipid" onclick="toggleAnswer('lipid')" class="btn-substance">脂質</button>
+                <button id="btn-protein" onclick="toggleAnswer('protein')" class="btn-substance">蛋白質</button>
+                <button id="btn-vitc" onclick="toggleAnswer('vitc')" class="btn-substance col-span-2">維生素C</button>
+            </div>
+
+            <!-- 圓潤可愛的提交按鈕 -->
+            <button onclick="submitAnswer()"
+                class="bg-amber-400 border-b-4 border-amber-600 text-white text-2xl font-black py-4 mt-3 rounded-2xl shadow-md active:scale-95 active:border-b-0 active:translate-y-1 transition-all relative overflow-hidden">
+                確認結果
+            </button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

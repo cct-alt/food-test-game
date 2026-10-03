@@ -1,83 +1,142 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>生物實驗室：檢測快問快答</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <!-- 鎖定縮放，確保佈局穩定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>生物實驗室：檢測快問快答</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- 引入 Firebase (Compat 版本方便撰寫) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
+<!-- h-[100dvh] 和 fixed inset-0 完美解決 Safari 底部菜單遮擋問題 -->
+<body id="game-body" class="h-[100dvh] w-full fixed inset-0 flex flex-col overflow-hidden text-slate-700 select-none">
 
-<body id="game-body" class="h-screen flex flex-col overflow-hidden">
+  <!-- ================= 主選單與各類面板 ================= -->
+  <div id="main-menu" class="absolute inset-0 bg-white/40 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+    <h1 class="text-5xl font-black text-slate-800 mb-10 drop-shadow-md text-center leading-tight">食物物質<br>檢測系統</h1>
+    
+    <button onclick="showSetup()" class="w-64 bg-blue-500 border-b-4 border-blue-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-blue-400">開始遊戲</button>
+    
+    <button onclick="showNotes()" class="w-64 bg-emerald-500 border-b-4 border-emerald-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-emerald-400">溫習筆記</button>
+    
+    <button onclick="showLeaderboard()" class="w-64 bg-amber-500 border-b-4 border-amber-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all hover:bg-amber-400">排行榜</button>
+  </div>
 
-    <!-- 畫面上半部分：顯示區 (木桌區域) -->
-    <!-- 使用透明度與毛玻璃，不要完全蓋死背景 -->
-    <div class="h-1/2 relative flex flex-col items-center border-b-2 border-white/50 bg-white/20 backdrop-blur-[2px]">
-
-        <div class="w-full flex justify-between p-4 text-xl font-bold z-10 font-sans text-slate-700 drop-shadow-sm">
-            <div class="flex flex-col">
-                <span class="text-slate-600">分數: <span id="score"
-                        class="text-amber-500 text-2xl font-black">0</span></span>
-                <span id="combo-display" class="text-orange-500 text-sm hidden font-black">🔥 連擊 x<span
-                        id="combo">1</span></span>
-            </div>
-            <div class="text-center">
-                <div id="hp-display" class="text-2xl drop-shadow-md">❤️❤️❤️</div>
-            </div>
-            <div class="text-right">
-                <span class="text-slate-500 text-sm">剩餘時間</span><br>
-                <span id="timer" class="text-rose-500 text-2xl font-black">--</span><span
-                    class="text-sm text-rose-400">s</span>
-            </div>
-        </div>
-
-        <div id="feedback"
-            class="absolute top-1/3 text-5xl font-black opacity-0 transition-opacity z-20 pointer-events-none drop-shadow-md">
-        </div>
-
-        <div id="test-item-container" class="absolute top-0 mt-20 flex flex-col items-center">
-            <!-- 試劑名稱標籤 -->
-            <div id="reagent-label"
-                class="bg-white/90 border-2 border-slate-200 text-slate-700 px-6 py-2 rounded-full font-bold mb-4 shadow-lg transition-all duration-300">
-                等待檢測...</div>
-            <div id="svg-container" class="drop-shadow-xl"></div>
-        </div>
+  <!-- 開始遊戲前的身份設定 -->
+  <div id="setup-screen" class="hidden absolute inset-0 bg-white/90 backdrop-blur-lg flex flex-col items-center justify-center z-50">
+    <h2 class="text-4xl font-black text-slate-800 mb-8">選擇考生身份</h2>
+    
+    <div class="flex space-x-4 mb-10">
+      <div class="flex flex-col items-center">
+        <label class="font-bold text-slate-500 mb-2">班別</label>
+        <select id="class-select" class="text-2xl p-3 rounded-xl border-2 border-slate-300 bg-white shadow-sm focus:outline-none focus:border-blue-500 appearance-none text-center w-32"></select>
+      </div>
+      <div class="flex flex-col items-center">
+        <label class="font-bold text-slate-500 mb-2">學號</label>
+        <select id="num-select" class="text-2xl p-3 rounded-xl border-2 border-slate-300 bg-white shadow-sm focus:outline-none focus:border-blue-500 appearance-none text-center w-32"></select>
+      </div>
     </div>
-
-    <!-- 畫面下半部分：作答區 -->
-    <div class="h-1/2 p-5 flex flex-col relative z-10 bg-white/30 backdrop-blur-md">
-
-        <!-- 開始/結算畫面 -->
-        <div id="overlay-screen"
-            class="absolute inset-0 bg-white/80 backdrop-blur-lg flex flex-col items-center justify-center z-30">
-            <h1 id="screen-title" class="text-5xl font-black text-slate-700 mb-4 drop-shadow-sm">食物物質檢測</h1>
-            <p id="final-score" class="text-3xl text-slate-500 mb-8 hidden font-bold">最終分數: <span
-                    class="text-amber-500 font-black text-5xl">0</span></p>
-            <button onclick="startGame()"
-                class="bg-blue-500 border-b-4 border-blue-700 text-white px-10 py-5 rounded-3xl text-3xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all hover:bg-blue-400">開始測試</button>
-        </div>
-
-        <!-- 5個按鈕與提交 -->
-        <div id="game-controls"
-            class="flex flex-col h-full pointer-events-none opacity-50 transition-opacity duration-300">
-            <div class="grid grid-cols-2 gap-3 mb-auto">
-                <button id="btn-glucose" onclick="toggleAnswer('glucose')" class="btn-substance">葡萄糖</button>
-                <button id="btn-starch" onclick="toggleAnswer('starch')" class="btn-substance">澱粉</button>
-                <button id="btn-lipid" onclick="toggleAnswer('lipid')" class="btn-substance">脂質</button>
-                <button id="btn-protein" onclick="toggleAnswer('protein')" class="btn-substance">蛋白質</button>
-                <button id="btn-vitc" onclick="toggleAnswer('vitc')" class="btn-substance col-span-2">維生素C</button>
-            </div>
-
-            <!-- 圓潤可愛的提交按鈕 -->
-            <button onclick="submitAnswer()"
-                class="bg-amber-400 border-b-4 border-amber-600 text-white text-2xl font-black py-4 mt-3 rounded-2xl shadow-md active:scale-95 active:border-b-0 active:translate-y-1 transition-all relative overflow-hidden">
-                確認結果
-            </button>
-        </div>
+    
+    <div class="flex space-x-4">
+      <button onclick="hideSetup()" class="bg-slate-400 border-b-4 border-slate-600 text-white px-8 py-3 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all">返回</button>
+      <button onclick="confirmSetupAndStart()" class="bg-blue-500 border-b-4 border-blue-700 text-white px-10 py-3 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all">確認開始</button>
     </div>
+  </div>
 
-    <script src="game.js"></script>
+  <!-- 溫習筆記面板 -->
+  <div id="notes-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">
+    <h2 class="text-4xl font-black text-slate-800 mt-4 mb-6">溫習筆記</h2>
+    <div class="w-full max-w-md flex-1 overflow-y-auto rounded-2xl border-2 border-slate-200 bg-white shadow-inner p-4 hide-scrollbar">
+      <table class="w-full text-left border-collapse">
+        <tbody>
+          <tr class="border-b-2 border-slate-100"><td class="py-3 font-bold text-lg">葡萄糖</td><td class="py-3">尿糖試紙</td><td class="py-3 text-green-600 font-bold">綠色</td></tr>
+          <tr class="border-b-2 border-slate-100"><td class="py-3 font-bold text-lg">蛋白質</td><td class="py-3">尿蛋白試紙</td><td class="py-3 text-green-600 font-bold">綠色</td></tr>
+          <tr class="border-b-2 border-slate-100"><td class="py-3 font-bold text-lg">澱粉</td><td class="py-3">碘液</td><td class="py-3 text-blue-900 font-bold">藍黑色</td></tr>
+          <tr class="border-b-2 border-slate-100"><td class="py-3 font-bold text-lg">維生素C</td><td class="py-3">DCPIP 溶液</td><td class="py-3 text-slate-400 font-bold">無色</td></tr>
+          <tr><td class="py-3 font-bold text-lg">脂質</td><td class="py-3">濾紙</td><td class="py-3 text-amber-500 font-bold leading-tight">恆久<br>半透明點</td></tr>
+        </tbody>
+      </table>
+      <p class="mt-4 text-sm text-slate-500 bg-slate-100 p-3 rounded-lg">💡 提示：<br>沒有葡萄糖/蛋白質 = 試紙呈黃色<br>沒有澱粉 = 碘液呈棕色<br>沒有維生素C = DCPIP呈藍色<br>沒有脂質 = 濾紙水跡會消失</p>
+    </div>
+    <button onclick="hideNotes()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4">返回主選單</button>
+  </div>
+
+  <!-- 排行榜面板 -->
+  <div id="leaderboard-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">
+    <h2 class="text-4xl font-black text-amber-500 mt-4 mb-2 drop-shadow-sm">🏆 榮譽榜 🏆</h2>
+    <p class="text-slate-500 mb-4 font-bold">全級 Top 20</p>
+    
+    <div class="w-full max-w-md flex-1 overflow-y-auto rounded-2xl border-2 border-amber-200 bg-white shadow-inner p-2 hide-scrollbar relative">
+      <div id="loading-leaderboard" class="absolute inset-0 flex items-center justify-center text-slate-400 font-bold">讀取中...</div>
+      <table class="w-full text-center border-collapse text-lg">
+        <thead><tr class="border-b-2 border-amber-200 text-amber-600"><th class="py-2">排名</th><th class="py-2">班別</th><th class="py-2">學號</th><th class="py-2">最高分</th></tr></thead>
+        <tbody id="leaderboard-body">
+          <!-- 數據由 JS 動態生成 -->
+        </tbody>
+      </table>
+    </div>
+    <button onclick="hideLeaderboard()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4">返回主選單</button>
+  </div>
+
+  <!-- 遊戲結束結算畫面 -->
+  <div id="game-over-screen" class="hidden absolute inset-0 bg-white/90 backdrop-blur-lg flex flex-col items-center justify-center z-40">
+    <h1 class="text-5xl font-black text-slate-800 mb-2">測試結束</h1>
+    <p class="text-2xl text-slate-500 mb-2">考生: <span id="final-player" class="font-bold"></span></p>
+    <p class="text-3xl text-slate-500 mb-8 font-bold">最終分數: <span id="final-score-val" class="text-amber-500 font-black text-6xl">0</span></p>
+    <div class="flex flex-col space-y-4">
+      <button onclick="startGame()" class="w-64 bg-blue-500 border-b-4 border-blue-700 text-white py-4 rounded-2xl text-2xl font-black active:scale-95 active:border-b-0 active:translate-y-1 transition-all">重新挑戰</button>
+      <button onclick="backToMenu()" class="w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-2xl font-black active:scale-95 active:border-b-0 active:translate-y-1 transition-all">返回主選單</button>
+    </div>
+  </div>
+
+  <!-- ================= 遊戲核心區 (分為上下半部) ================= -->
+  
+  <!-- 畫面上半部分：顯示區 (木桌區域) -->
+  <div class="h-1/2 relative flex flex-col items-center border-b-2 border-white/50 bg-white/20 backdrop-blur-[2px]">
+    <div class="w-full flex justify-between p-4 text-xl font-bold z-10 font-sans text-slate-700 drop-shadow-sm">
+      <div class="flex flex-col">
+        <span class="text-slate-600">分數: <span id="score" class="text-amber-500 text-2xl font-black">0</span></span>
+        <span id="combo-display" class="text-orange-500 text-sm hidden font-black">🔥 連擊 x<span id="combo">1</span></span>
+      </div>
+      <div class="text-center">
+        <div id="hp-display" class="text-2xl drop-shadow-md">❤️❤️❤️</div>
+      </div>
+      <div class="text-right">
+        <span class="text-slate-500 text-sm">剩餘時間</span><br>
+        <span id="timer" class="text-rose-500 text-2xl font-black">--</span><span class="text-sm text-rose-400">s</span>
+      </div>
+    </div>
+    
+    <div id="feedback" class="absolute top-1/3 text-5xl font-black opacity-0 transition-opacity z-20 pointer-events-none drop-shadow-md text-center w-full"></div>
+
+    <div id="test-item-container" class="absolute top-0 mt-20 flex flex-col items-center pointer-events-none">
+      <div id="reagent-label" class="bg-white/90 border-2 border-slate-200 text-slate-700 px-6 py-2 rounded-full font-bold mb-4 shadow-lg transition-all duration-300">等待檢測...</div>
+      <div id="svg-container" class="drop-shadow-xl"></div>
+    </div>
+  </div>
+
+  <!-- 畫面下半部分：作答區 -->
+  <div class="h-1/2 p-5 flex flex-col relative z-10 bg-white/30 backdrop-blur-md">
+    <div id="game-controls" class="flex flex-col h-full pointer-events-none opacity-50 transition-opacity duration-300 pb-2">
+      <div class="grid grid-cols-2 gap-3 mb-auto">
+        <button id="btn-glucose" onclick="toggleAnswer('glucose')" class="btn-substance">葡萄糖</button>
+        <button id="btn-starch" onclick="toggleAnswer('starch')" class="btn-substance">澱粉</button>
+        <button id="btn-lipid" onclick="toggleAnswer('lipid')" class="btn-substance">脂質</button>
+        <button id="btn-protein" onclick="toggleAnswer('protein')" class="btn-substance">蛋白質</button>
+        <button id="btn-vitc" onclick="toggleAnswer('vitc')" class="btn-substance col-span-2">維生素C</button>
+      </div>
+      
+      <!-- 圓潤可愛的提交按鈕 -->
+      <button onclick="submitAnswer()" class="bg-amber-400 border-b-4 border-amber-600 text-white text-2xl font-black py-4 mt-3 rounded-2xl shadow-md active:scale-95 active:border-b-0 active:translate-y-1 transition-all relative overflow-hidden">
+        確認結果
+      </button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
 </body>
-
 </html>

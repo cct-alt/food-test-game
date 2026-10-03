@@ -13,15 +13,53 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ================= 音效與素材 =================
-const sfx = {
-  correct: new Audio('correct.mp3'),
-  wrong: new Audio('wrong.mp3'),
-  swoosh: new Audio('swoosh.mp3'),
-  click: new Audio('click.mp3')
-};
-Object.values(sfx).forEach(a => { a.volume = 0.5; a.load(); });
-function playSound(name) { try { sfx[name].currentTime = 0; sfx[name].play().catch(e=>{}); } catch(e) {} }
+// ================= 音效與素材 (Web Audio API 零延遲升級) =================
+// 建立音頻環境 (兼容 Safari)
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+const audioBuffers = {}; // 用來存放解碼後的記憶體音效
+
+// 非同步載入並解碼音效檔
+async function loadSound(name, url) {
+  try {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    audioBuffers[name] = audioBuffer;
+  } catch (error) {
+    console.log(`音效 ${name} 載入失敗，請確認檔案是否存在`, error);
+  }
+}
+
+// 遊戲載入時立刻把音效塞進記憶體
+loadSound('correct', 'correct.mp3');
+loadSound('wrong', 'wrong.mp3');
+loadSound('swoosh', 'swoosh.mp3');
+loadSound('click', 'click.mp3');
+
+// 零延遲播放函數
+function playSound(name) {
+  // Apple 安全機制：必須在玩家第一次點擊時「喚醒」音效引擎
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  const buffer = audioBuffers[name];
+  if (buffer) {
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    
+    // 設定音量 (0.5 = 50%)
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0.5;
+    
+    // 連接並立刻播放
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    source.start(0);
+  }
+}
+
 
 const svgs = {
   strip: `<svg width="60" height="200" viewBox="0 0 40 150" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="-10" width="20" height="150" rx="3" fill="#F8F9FA" stroke="#D1D5DB" stroke-width="2"/><rect id="dynamic-color" x="12" y="110" width="16" height="30" rx="2" fill="gold" style="transition: fill 0.5s;" /></svg>`,

@@ -2,28 +2,47 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <!-- 鎖定縮放，確保佈局穩定 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>生物實驗室：檢測快問快答</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="style.css">
   
-  <!-- 引入 Firebase (Compat 版本方便撰寫) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
-<!-- h-[100dvh] 和 fixed inset-0 完美解決 Safari 底部菜單遮擋問題 -->
 <body id="game-body" class="h-[100dvh] w-full fixed inset-0 flex flex-col overflow-hidden text-slate-700 select-none">
 
   <!-- ================= 主選單與各類面板 ================= -->
   <div id="main-menu" class="absolute inset-0 bg-white/40 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-300">
-    <h1 class="text-5xl font-black text-slate-800 mb-10 drop-shadow-md text-center leading-tight">食物物質<br>檢測系統</h1>
+    <h1 class="text-5xl font-black text-slate-800 mb-8 drop-shadow-md text-center leading-tight">食物物質<br>檢測系統</h1>
     
     <button onclick="showSetup()" class="w-64 bg-blue-500 border-b-4 border-blue-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-blue-400">開始遊戲</button>
+    
+    <!-- 新增：玩法教學按鈕 -->
+    <button onclick="showTutorial()" class="w-64 bg-purple-500 border-b-4 border-purple-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-purple-400">玩法教學</button>
     
     <button onclick="showNotes()" class="w-64 bg-emerald-500 border-b-4 border-emerald-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-emerald-400">溫習筆記</button>
     
     <button onclick="showLeaderboard()" class="w-64 bg-amber-500 border-b-4 border-amber-700 text-white py-4 rounded-2xl text-2xl font-black shadow-lg active:scale-95 active:border-b-0 active:translate-y-1 transition-all hover:bg-amber-400">排行榜</button>
+  </div>
+
+  <!-- 新增：玩法教學面板 -->
+  <div id="tutorial-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center justify-center z-50 p-6">
+    <h2 class="text-4xl font-black text-purple-600 mb-6 drop-shadow-sm">🎮 如何遊玩 🎮</h2>
+    
+    <div class="w-full max-w-2xl overflow-y-auto rounded-3xl border-4 border-purple-200 bg-white shadow-xl p-6 hide-scrollbar text-lg text-slate-700 font-bold leading-relaxed space-y-4">
+      <p>1. <span class="text-blue-500">觀察實驗：</span>畫面上半部的木桌會伸出化學試劑或濾紙，請仔細觀察它們的<span class="text-amber-500">顏色變化</span>或<span class="text-amber-500">半透明點</span>。</p>
+      <p>2. <span class="text-blue-500">切換狀態：</span>當物品縮回後，下方的作答區會解鎖。點擊對應的物質按鈕來切換狀態：</p>
+      <ul class="list-disc pl-8 space-y-2 text-base text-slate-600">
+        <li>按 1 下變成 <span class="text-green-600 font-black bg-green-100 px-2 py-1 rounded-lg">✔️ 含有</span> (陽性反應)</li>
+        <li>按 2 下變成 <span class="text-rose-600 font-black bg-rose-100 px-2 py-1 rounded-lg">❌ 沒有</span> (陰性反應)</li>
+        <li>按 3 下變回 <span class="text-slate-500 font-black bg-slate-100 border-2 border-slate-300 px-2 py-1 rounded-lg">白色</span> (剛才的實驗沒測這個)</li>
+      </ul>
+      <p>3. <span class="text-blue-500">確認結果：</span>設定好所有按鈕後，請在<span class="text-rose-500 font-black">倒數計時結束前</span>按下底部的「確認結果」。時間到會自動強制提交！</p>
+      <p>4. <span class="text-blue-500">難度升級：</span>連續答對會觸發 Combo 加分，分數越高難度越大。最高難度會要求你同時記住 5 種物質的變化！</p>
+    </div>
+    
+    <button onclick="hideTutorial()" class="mt-8 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all hover:bg-slate-300">我明白了</button>
   </div>
 
   <!-- 開始遊戲前的身份設定 -->
@@ -47,13 +66,11 @@
     </div>
   </div>
 
-   <!-- 溫習筆記面板 -->
+  <!-- 溫習筆記面板 (已修改脂質陰性結果) -->
   <div id="notes-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">
     <h2 class="text-4xl font-black text-slate-800 mt-4 mb-6 drop-shadow-sm">溫習筆記</h2>
     
-    <!-- 加闊了面板 (max-w-2xl) 以容納 4 個直行 -->
     <div class="w-full max-w-2xl flex-1 overflow-y-auto rounded-3xl border-4 border-slate-200 bg-white shadow-xl p-2 sm:p-6 hide-scrollbar">
-      
       <table class="w-full text-center border-collapse">
         <thead>
           <tr class="border-b-4 border-slate-200 text-slate-600 font-black text-lg sm:text-xl">
@@ -65,46 +82,35 @@
         </thead>
         <tbody class="text-md sm:text-lg">
           <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="py-4 font-bold text-slate-700">葡萄糖</td>
-            <td class="py-4 text-slate-600">尿糖試紙</td>
-            <td class="py-4 text-green-500 font-black">綠色</td>
-            <td class="py-4 text-amber-400 font-black">黃色</td>
+            <td class="py-4 font-bold text-slate-700">葡萄糖</td><td class="py-4 text-slate-600">尿糖試紙</td>
+            <td class="py-4 text-green-500 font-black">綠色</td><td class="py-4 text-amber-400 font-black">黃色</td>
           </tr>
           <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="py-4 font-bold text-slate-700">蛋白質</td>
-            <td class="py-4 text-slate-600">尿蛋白試紙</td>
-            <td class="py-4 text-green-500 font-black">綠色</td>
-            <td class="py-4 text-amber-400 font-black">黃色</td>
+            <td class="py-4 font-bold text-slate-700">蛋白質</td><td class="py-4 text-slate-600">尿蛋白試紙</td>
+            <td class="py-4 text-green-500 font-black">綠色</td><td class="py-4 text-amber-400 font-black">黃色</td>
           </tr>
           <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="py-4 font-bold text-slate-700">澱粉</td>
-            <td class="py-4 text-slate-600">碘液</td>
-            <td class="py-4 text-blue-900 font-black">藍黑色</td>
-            <td class="py-4 text-amber-700 font-black">棕色</td>
+            <td class="py-4 font-bold text-slate-700">澱粉</td><td class="py-4 text-slate-600">碘液</td>
+            <td class="py-4 text-blue-900 font-black">藍黑色</td><td class="py-4 text-amber-700 font-black">棕色</td>
           </tr>
           <tr class="border-b-2 border-slate-100 hover:bg-slate-50 transition-colors">
-            <td class="py-4 font-bold text-slate-700">維生素C</td>
-            <td class="py-4 text-slate-600">DCPIP 溶液</td>
-            <td class="py-4 text-slate-300 font-black drop-shadow-sm">無色</td>
-            <td class="py-4 text-blue-500 font-black">藍色</td>
+            <td class="py-4 font-bold text-slate-700">維生素C</td><td class="py-4 text-slate-600">DCPIP 溶液</td>
+            <td class="py-4 text-slate-300 font-black drop-shadow-sm">無色</td><td class="py-4 text-blue-500 font-black">藍色</td>
           </tr>
           <tr class="hover:bg-slate-50 transition-colors">
-            <td class="py-4 font-bold text-slate-700">脂質</td>
-            <td class="py-4 text-slate-600">濾紙</td>
+            <td class="py-4 font-bold text-slate-700">脂質</td><td class="py-4 text-slate-600">濾紙</td>
             <td class="py-4 text-emerald-600 font-black leading-tight">恆久<br>半透明點</td>
-            <td class="py-4 text-rose-400 font-black leading-tight">水跡<br>會消失</td>
+            <!-- 修改這裡：將水跡會消失改為半透明點消失 -->
+            <td class="py-4 text-rose-400 font-black leading-tight">半透明點<br>消失</td>
           </tr>
         </tbody>
       </table>
-      
       <p class="mt-6 text-sm sm:text-base text-slate-500 bg-slate-50 border-2 border-slate-100 p-4 rounded-xl text-center font-bold">
         💡 提示：請在遊戲中看清楚試劑的顏色變化，時間到了會自動提交答案喔！
       </p>
     </div>
-    
     <button onclick="hideNotes()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-slate-300">返回主選單</button>
   </div>
-
 
   <!-- 排行榜面板 -->
   <div id="leaderboard-screen" class="hidden absolute inset-0 bg-white/95 backdrop-blur-lg flex flex-col items-center z-50 p-6">
@@ -115,12 +121,10 @@
       <div id="loading-leaderboard" class="absolute inset-0 flex items-center justify-center text-slate-400 font-bold">讀取中...</div>
       <table class="w-full text-center border-collapse text-lg">
         <thead><tr class="border-b-2 border-amber-200 text-amber-600"><th class="py-2">排名</th><th class="py-2">班別</th><th class="py-2">學號</th><th class="py-2">最高分</th></tr></thead>
-        <tbody id="leaderboard-body">
-          <!-- 數據由 JS 動態生成 -->
-        </tbody>
+        <tbody id="leaderboard-body"></tbody>
       </table>
     </div>
-    <button onclick="hideLeaderboard()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4">返回主選單</button>
+    <button onclick="hideLeaderboard()" class="mt-6 w-64 bg-slate-400 border-b-4 border-slate-600 text-white py-4 rounded-2xl text-xl font-bold active:scale-95 active:border-b-0 active:translate-y-1 transition-all mb-4 hover:bg-slate-300">返回主選單</button>
   </div>
 
   <!-- 遊戲結束結算畫面 -->
@@ -136,7 +140,6 @@
 
   <!-- ================= 遊戲核心區 (分為上下半部) ================= -->
   
-  <!-- 畫面上半部分：顯示區 (木桌區域) -->
   <div class="h-1/2 relative flex flex-col items-center border-b-2 border-white/50 bg-white/20 backdrop-blur-[2px]">
     <div class="w-full flex justify-between p-4 text-xl font-bold z-10 font-sans text-slate-700 drop-shadow-sm">
       <div class="flex flex-col">
@@ -160,7 +163,6 @@
     </div>
   </div>
 
-  <!-- 畫面下半部分：作答區 -->
   <div class="h-1/2 p-5 flex flex-col relative z-10 bg-white/30 backdrop-blur-md">
     <div id="game-controls" class="flex flex-col h-full pointer-events-none opacity-50 transition-opacity duration-300 pb-2">
       <div class="grid grid-cols-2 gap-3 mb-auto">
@@ -171,7 +173,6 @@
         <button id="btn-vitc" onclick="toggleAnswer('vitc')" class="btn-substance col-span-2">維生素C</button>
       </div>
       
-      <!-- 圓潤可愛的提交按鈕 -->
       <button onclick="submitAnswer()" class="bg-amber-400 border-b-4 border-amber-600 text-white text-2xl font-black py-4 mt-3 rounded-2xl shadow-md active:scale-95 active:border-b-0 active:translate-y-1 transition-all relative overflow-hidden">
         確認結果
       </button>

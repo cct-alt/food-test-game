@@ -109,6 +109,8 @@ for(let i=1; i<=40; i++) numSelect.innerHTML += `<option value="${i}">${i}</opti
 
 function showSetup() { playSound('click'); mainMenu.classList.add('hidden'); setupScreen.classList.remove('hidden'); }
 function hideSetup() { playSound('click'); setupScreen.classList.add('hidden'); mainMenu.classList.remove('hidden'); }
+function showTutorial() { playSound('click'); mainMenu.classList.add('hidden'); tutorialScreen.classList.remove('hidden'); }
+function hideTutorial() { playSound('click'); tutorialScreen.classList.add('hidden'); mainMenu.classList.remove('hidden'); }
 function showNotes() { playSound('click'); mainMenu.classList.add('hidden'); notesScreen.classList.remove('hidden'); }
 function hideNotes() { playSound('click'); notesScreen.classList.add('hidden'); mainMenu.classList.remove('hidden'); }
 function backToMenu() { playSound('click'); gameOverScreen.classList.add('hidden'); mainMenu.classList.remove('hidden'); }
